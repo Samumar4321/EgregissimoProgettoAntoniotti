@@ -1,0 +1,44 @@
+ESEMPII CLASS
+class(Name, [Parents])
+
+class(Name)
+parent(Parent, Class)
+
+
+ESEMPII CLASS-FIELD
+class_field(ClassName, Name, Value, Type)
+
+
+ESEMPII METHOD
+class_method(ClassName, Name, Args, body)
+
+
+ESEMPII INSTANCE
+instance(Name, ClassName)
+
+
+
+ESEMPII INSTANCE-FIELD
+instance_field(Instance_Name, Name, Value, Type)
+
+
+
+
+ho la classe Cane che eridita da Animale
+
+class(animale,[])
+class(cane,[animale])
+
+class_field(animale, peso, 0, int)
+class_field(animale, eta, 0, int)
+class_field(animale, nome, "", string)
+class_field(cane, eta, 0, int)
+ggg
+
+creo uan istanza c1 con eta = 7, devo scartare il field "eta" di animale 
+
+instance(c1, cane)
+instance_field(c1, eta, 7, int)
+instance_field(c1, peso, 0, int)
+instance_field(c1, nome, "", string)
+
