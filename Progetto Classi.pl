@@ -8,8 +8,8 @@ def_class(Name, Parents) :-
     atom(Name),
     !,
     is_list(Parents),
-    maplist(check_part(Name), Parts),
-    assert(class(Name, Parents, [])).
+    assert(class(Name, Parents, [])),
+    is_class(Name).
 
 
 def_class(Name, Parents, Parts) :-
@@ -21,10 +21,14 @@ def_class(Name, Parents, Parts) :-
     maplist(check_part(Name), Parts),
     assert(class(Name, Parents, Parts)).
 
-
+%%%dove cazzo la metto sta merda!!!!!
 is_class(Name) :-
     atom(Name),
-    class(Name,_ ,_ ),
+    class(Name, _, _),
+    findall([Name, Parents, Parts], class(Name, Parents, Parts), Class), 
+    nth0(0, Class, [Name, Parents, Parts]),   
+   /* length(Parents, N),
+    writeln(N),   */
     maplist(is_class, Parents),
     !.
 
