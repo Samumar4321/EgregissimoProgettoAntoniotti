@@ -42,3 +42,6 @@ instance_field(c1, eta, 7, int)
 instance_field(c1, peso, 0, int)
 instance_field(c1, nome, "", string)
 
+
+
+findall([cane,Parents,Parts],class(cane,Parents,Parts), Classes),getFirst(Classes, C).
