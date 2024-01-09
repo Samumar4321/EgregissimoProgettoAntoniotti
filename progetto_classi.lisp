@@ -24,11 +24,12 @@
 
 ;; Funzione che definisce la classe
 (defun def-class (class-name parents &rest parts)
-  ;; Verifica la validita'  di class-name e parents
-  (cond ((not (symbolp class-name)) (error (format T "ERROR --> Class-name: ~S is not a symbol ~%" class-name)))
-        ((not (listp parents)) (error (format  "ERROR --> Parents: ~S is not a valid list ~%" parents))))
+  ;; Verifica la validita' di class-name e parents
+  (cond ((not (symbolp class-name)) (error (format t "ERROR --> Class-name: ~S is not a symbol ~%" class-name)))
+        ((not (listp parents)) (error (format t "ERROR --> Parents: ~S is not a valid list ~%" parents)))
+        ((is-class class-name) (error "Class already defined")))
   
-  ;;ereditarietà
+  ;;ereditarieta'
   (let ((all-parents (remove-duplicates
                       (flatten (mapcar #'inherit-parents parents))
                       :test #'equal
@@ -38,15 +39,19 @@
                           (inherit-fields all-parents)
                           :test #'fields-equal
                           :from-end
-                          t)))
-      
-      ;; Inizializza la lista di campi e metodi
+                          t))
+          (parents-methods (remove-duplicates
+                            (inherit-methods all-parents)
+                            :test #'methods-equal
+                            :from-end
+                            t)))
+       ;; se non ho parti allora creo diretto la classe senza controlli   
       (if (null parts)
           (let ((class-structure `(class, class-name, all-parents, parents-fields, ())))
             (add-class-spec class-name class-structure))
         ;; ELSE
-        (let ((fields (check-fields (car parts)))
-              (methods (check-methods (cadr parts))))          
+        (let ((fields (check-parts parts '1))
+              (methods (check-parts parts '2)))          
           ;; Analizzo i fields
           (let ((all-fields (remove-duplicates
                              (append 
@@ -54,7 +59,7 @@
                                (lambda (elem)
                                  (cond ((null elem) ())
                                        ((not (listp elem)) (error 
-                                                            "Errore elem not list"))
+                                                            "Errore elem is not a list"))
                                        ((list elem) (if (not 
                                                          (null 
                                                           (assoc 
@@ -82,9 +87,10 @@
                                                                     (third found))
                                                                    elem)
                                                                   (T (error 
-                                                                      (format t 
-                                                                              "ERROR --> Elem: ~S is not of correct type~%" 
-                                                                              elem))))))
+                                                                      (format 
+                                                                       t 
+                                                                       "ERROR --> Elem: ~S is not of correct type~%" 
+                                                                       elem))))))
                                                       ;;ELSE
                                                       elem))))
                                
@@ -92,20 +98,75 @@
                               parents-fields)
                              :test #'fields-equal
                              :from-end
-                             T)))
+                             T))
+                (class-methods (remove-duplicates
+                                (mapcar 
+                                 (lambda (elem)
+                                   (cond ((null elem) ())
+                                         ((not (listp elem)) (error 
+                                                              "Errore elem is not a list"))
+                                         ((list elem) (if (not 
+                                                           (null 
+                                                            (assoc 
+                                                             (first elem) 
+                                                             parents-methods)))
+                                                          (let ((found 
+                                                                 (assoc 
+                                                                  (first elem) 
+                                                                  parents-methods)))
+                                                            (if (and (methods-equal 
+                                                                      elem
+                                                                      found)
+                                                                     (equal 
+                                                                      (second elem)
+                                                                      (second found)))
+                                                                (list (first elem)
+                                                                      (second elem)
+                                                                      (process-method (first elem)
+                                                                                      elem));;check degli args
+                                                              ;;ELSE
+                                                              (T (error 
+                                                                  (format 
+                                                                   t 
+                                                                   "ERROR --> Elem: ~S cannot override with this method~%"
+                                                                   elem)))))
+                                                        ;;ELSE
+                                                        (list (first elem)
+                                                              (second elem)
+                                                              (process-method (first elem)
+                                                                              elem))))))
+                                 
+                                 methods)
+                                :test #'methods-equal
+                                :from-end
+                                T)))
             
             ;; Costruisce la struttura della classe
-            (write fields)
-            (terpri)
-            (write parents-fields)
-            (terpri)
-            (write all-fields)
-            (let ((class-structure `(class, class-name, all-parents, all-fields, methods)))
+            (let ((class-structure `(class, class-name, all-parents, all-fields, class-methods)))
               ;; Aggiunge la specifica della classe al registro globale
               (add-class-spec class-name class-structure)))))))
   ;; Ritorna il nome della classe
   class-name)
   
+
+(defun check-parts (parts condition)
+  (let ((fields ())
+        (methods ())
+        (all-parts (mapcar #'check-part parts)))
+    (apply #'append (remove NIL (mapcar (lambda (elem)
+                          (if (equal (first elem) condition)
+                              (rest elem)
+                            ))
+                        all-parts)))))
+                
+
+(defun check-part (part)
+  (cond ((null part) ())
+        ((listp part) (cond ((equal (first part) 'fields) (append '(1) (check-fields part)))
+                            ((equal (first part) 'methods) (append '(2) (check-methods part)))
+                            (T (error "One or more parts are not correctly formatted"))))
+        (T (error "One or more parts are not lists"))))
+
 (defun fields-equal (field1 field2)
   (cond ((equal field1 field2) T)
         ((equal (first field1) (first field2)) T)
@@ -192,11 +253,15 @@
         ((equal (length item) 3) (let ((name (first item))
                                        (args (second item))
                                        (body (third item)))
-                                   (symbolp name)                                                 
-                                   (list 
-                                    name 
-                                    args 
-                                    body))) 
+                                   (if (and (symbolp name)
+                                            (listp args)
+                                            (not (null body)))
+                                       (list 
+                                        name 
+                                        args 
+                                        body)
+                                     ;;ELSE
+                                     (error  "ERROR --> Method is not a valid method, a valid method = (name (args) (body))")))) 
         (T (error (format 
                    t 
                    "ERROR --> Method: ~S is not a valid method, a valid method = (name (args) (body)) ~%" 
@@ -239,7 +304,6 @@
 
 
 (defun field* (instance field-name)
-  (write field-name)
   (cond ((not (listp field-name)) (error (format 
                                           t 
                                           "ERROR --> Field-name: ~S is not a list ~%" 
@@ -280,12 +344,6 @@
                                              class-name)))
         ((is-class class-name) (if (assoc field-name (get-class-fields class-name)) 
                                    (assoc field-name (get-class-fields class-name))
-                                 ;; ELSE
-                                 ;;(error (format 
-                                 ;;        t 
-                                 ;;        "ERROR --> Field-name: ~A is not a defined field in ~A ~%" 
-                                 ;;        field-name 
-                                 ;;        class-name))))
                                  NIL))
         (T (error (format 
                    t 
@@ -321,10 +379,13 @@
               method-name 
               (get-class-methods class-name))
            ;;ELSE
-           (error (format 
-                   t 
-                   "ERROR --> Method: ~S is not a valid method~%" 
-                   method-name))))
+           (if (null (third (get-class-spec class-name)))
+               NIL
+             ;;ELSE
+             (first (mapcar (lambda (elem)
+                              (get-class-method elem method-name))
+                            (third (get-class-spec class-name)))))
+           ))
         (T (error (format 
                    t 
                    "ERROR --> (get-class-method ~S ~S) unhandled~%" 
@@ -333,7 +394,6 @@
 
 
 (defun make (class-name &rest slots)
-  (write slots)
   (cond ((not (is-class class-name)) (error (format 
                                              t 
                                              "ERROR --> Class: ~S is not a defined class~%" 
@@ -438,7 +498,7 @@
 
 ;; Prende i field di una classe, recupera uno specifico field, in particolare il suo type,
 ;; e controlla che new-value sia un valore ammesso
-;; ritorna -1 se field-name non è un field della classe class-name
+;; ritorna -1 se field-name non ï¿½ un field della classe class-name
 (defun enable-modify(class-name field-name new-value)
   (let ((type (third (get-class-field class-name field-name))))
        (if (null type)
@@ -473,11 +533,19 @@
 
 
 (defun inherit-fields (classes)
-  (cond ((not (listp classes)) (Error))
+  (cond ((not (listp classes)) (error "List of parents is not a lost"))
         ((null classes) ())
         ((listp classes) (append 
                           (get-class-fields (first classes))
                           (inherit-fields (rest classes))))))
+
+
+(defun inherit-methods (classes)
+  (cond ((not (listp classes)) (error "List of parents is not a list"))
+        ((null classes) ())
+        ((listp classes) (append 
+                          (get-class-methods (first classes))
+                          (inherit-methods (rest classes))))))
 
 
 (defun inherit-parents (class-name)
@@ -496,29 +564,13 @@
                                  class-name)))
         ((is-class class-name) (let ((parents (third (get-class-spec class-name)))) ;;recupero la lista dei miei parents
                                  (append (list class-name) (mapcar #'inherit-parents parents))
-                                 ;;eseguiti ricorsivamente su ogni parent(mapcar)
-                                 ;;recupera i tuoi fields
-                                 ;;appendi ai tuoi fields i fields dei parent ottenuti da (mapcar)
-                                 ;; RICORDA CAZZO DI DEPTH FIRST PRIMA TUTTO DEL PRIMO PADRE E DEI SUOI PADRI
                                  ))
         (T (error (format 
                    t 
                    "ERROR --> (inherit-fields ~S)unhandled~%" 
                    class-name)))))
 
-#|
-(defun process-method (method-name method-spec)
-#| ... and here a miracle happens ... |#
-;;1) crea funzione lambda che prende almeno 1 cosa in input ovvero 'this' (istanza), 
-;;   controlla che l'istanza sia una istanza
-;;   recupera la classe a cui appartiene
-;;   recupera il metodo corretto in base al nome e poi recupera gli args e il body
-;;2) associa tale lambda al nome del methodo
-(eval (rewrite-method-code method-name method-spec)))
-|#
 
-;; method-name --> nome metodo (symbolo)
-;; method-spec --> ((args) (body))
 (defun process-method (method-name method-spec)
   (setf (fdefinition method-name)
         (lambda
@@ -526,17 +578,25 @@
           (if (not (is-instance this))
               (error "Error --> instance not valid")
             ;; ELSE
-            (let ((method-specs (get-method (second this) method-name)))
-              (apply
-               (cddr method-specs)
-               (append (list this) args)
-               )
-              ))))
-  (eval (rewrite-method-code method-name method-spec)))
+            (let ((method-specs (get-class-method (second this) method-name)))
+              (if method-specs
+                  (apply
+                   (third method-specs)
+                   (append (list this) args))
+                ;;ELSE
+                (error "No such method for this instance"))))))
+  (eval (rewrite-method-code method-spec)))
+
+
+
+(defun rewrite-method-code (method-spec)
+               (list 'lambda (append (list 'this)
+                                     (second method-spec))
+                     (cons 'progn (cddr method-spec))))
 
 
 ;; Funziona
-(def-class 'person nil '(fields (name "Eve" string) (age 21 integer)) '(methods))
+(def-class 'person nil '(methods) '(fields (name "Eve" string) (age 21 integer)))
 
 ;; Funziona
 (def-class 'student '(person) 
@@ -556,6 +616,7 @@
 (def-class 'animale '(student animale2) '(fields (zampe 4 integer) (name "Animale" string)) '(methods))
 
 (def-class 'padrone '(student) '(fields (animale1 NIL animale)) '(methods))
+
 ;; Funziona
 (is-class 'person)
 

@@ -8,8 +8,8 @@
 
 %%% getFirst(List, FirstElement)
 %%%
-%%% List � una lista qualunque,
-%%% FirstElement � un valore che corrisponde al primo elemento delle lista
+%%% List --> una lista qualunque,
+%%% FirstElement -->  un valore che corrisponde al primo elemento delle lista
 %%%
 %%% Permette di prendere il primo elemento di una lista,
 %%% o controllare che un elemento sia il primo di una lista
@@ -20,8 +20,8 @@ getFirst([N | Ns], N) :- !.
 
 %%% check_type(Value, Type)
 %%%
-%%% Value deve essere un valore del tipo Type
-%%% Type � il tipo del parametro value
+%%% Value --> deve essere un valore del tipo Type
+%%% Type --> il tipo del parametro value
 %%%
 %%% La funzione permette di verificare che un valore sia di tipo specificato
 %%% oppure di recuperare un il tipo di un valore
@@ -72,8 +72,8 @@ check_type(Value, string) :-
 
 %%% check_type_list(List, Type)
 %%%
-%%% List � una lista qualsiasi
-%%% Type � il tipo degli elementi della lista
+%%% List --> una lista qualsiasi
+%%% Type --> il tipo degli elementi della lista
 %%%
 %%% Funzione di appongio di check_type che
 %%% permette a quest'ultima di funzionare con le liste
@@ -86,8 +86,8 @@ check_type_list([V | Vs], Type) :-
 
 %%% get_parents(Class_Name, Result)
 %%%
-%%% Class_Name � un atomo che definisce il nome di una classe
-%%% Result � una lista contenente tutti i parents della classe Class_Name
+%%% Class_Name --> un atomo che definisce il nome di una classe
+%%% Result --> una lista contenente tutti i parents della classe Class_Name
 %%%
 %%% Mi permette di ottenere tutti i parents di una classe,
 %%% compresi quelli ereditati da altre classi, sotto forma di lista
@@ -99,9 +99,9 @@ get_parents(Class_Name, Result) :-
 
 %%% get_parents_app(List, Result)
 %%%
-%%% List � una lista dinamica che contiene dei parents
-%%% Result � una lista che contiene i tutti i parents
-%%% recuperati partendo da una lista di parents iniziale
+%%% List -->  una lista dinamica che contiene dei parents
+%%% Result -->  una lista che contiene i tutti i parents
+%%%             recuperati partendo da una lista di parents iniziale
 %%%
 %%% Funzione di appoggio per get_parents che mi permette di
 %%% recuperare tutti i parents partendo da una lista dinamica iniziale
@@ -120,10 +120,10 @@ get_parents_app([P | Ps], Result) :-
 
 %%% replace_word(Sentence, Word_to_Replace, New_Word, New_Sentence)
 %%%
-%%% Sentence � la frase iniziale da cui voglio sostituire una parola
-%%% Word_To_Replace � la parola che voglio sostituire nella Sentence
-%%% New_Word � la parola che sostituir� Word_To_Replace nella Sentence
-%%% New_Sentence � la frase con Word_To_Replace sostituit�
+%%% Sentence --> la frase iniziale da cui voglio sostituire una parola
+%%% Word_To_Replace --> la parola che voglio sostituire nella Sentence
+%%% New_Word --> la parola che sostituir� Word_To_Replace nella Sentence
+%%% New_Sentence --> la frase con Word_To_Replace sostituitita
 %%%
 %%% Funzione che mi permette di prendere una frase contenente una parola
 %%% e andarla a sostituire con un'altra parola
@@ -140,8 +140,8 @@ replace_word(Sentence, _, _, Sentence).
 
 %%% get_parents_methods(Class_Name, Result)
 %%%
-%%% Class_Name atomo che indica il nome di una classe definita
-%%% Result lista contenente i metodi dei parents della classe Class-Name
+%%% Class_Name --> atomo che indica il nome di una classe definita
+%%% Result --> lista contenente i metodi dei parents della classe Class-Name
 %%%
 %%% Recupera i metodi dei parents di una classe passata come parametro
 get_parents_methods(Class_Name, Result) :-
@@ -151,12 +151,12 @@ get_parents_methods(Class_Name, Result) :-
 
 %%% get_methods(List, Result)
 %%%
-%%% List � una lista di atomi che corrispondono a nomi di classi
-%%% Result lista contenente tutti i metodi che appartengono alle classi di List
+%%% List --> una lista di atomi che corrispondono a nomi di classi
+%%% Result --> lista contenente tutti i metodi
+%%%            che appartengono alle classi di List
 %%%
 %%% La funzione costruisce tramite ricorsione una lista
-%%% contenente tutti i metodi della lista di classi passata come parametro.
-%%% La lista 
+%%% contenente tutti i metodi della lista di classi passata come parametro. 
 get_methods([],[]) :-
     !.
 get_methods([Class_Name], Result) :-
@@ -168,10 +168,19 @@ get_methods([C | Cs], Result) :-
     is_class(C),
     get_methods(Cs, Mid_Result),
     class(C, _, Parts),
-    keep_methods(Parts, Result),
+    keep_methods(Parts, This_Result),
+    append(This_Result, Mid_Result, Result),
     !.
 
 
+%%% keep_methods(List, Result)
+%%%
+%%% List --> lista che contiene un insieme di parti, siano field o metodi
+%%% Result ---> lista che contiene solo le parti di forma
+%%%             method(Name, Args, Body)
+%%%
+%%% Funione di appoggio per get_methods che prende le parti di una classe
+%%% e mantiene solo i metodi scartando i fields
 keep_methods([], []).
 keep_methods([method(Name, Args, Body) | Ps], Result):-
     keep_methods(Ps, R),
@@ -180,7 +189,21 @@ keep_methods([field(_,_,_) | Ps], Result):-
     keep_methods(Ps, R),
     append([], R, Result).
     
-
+%%% def_class(Name, Parents, Parts)
+%%%
+%%% Name --> atomo che rappresenta il nome della classe
+%%% Parents --> lista che rappresenta i parents diretti di una classe
+%%% Parts --> lista che contiene fields e metodi di una classe
+%%%
+%%% Funzione che permette di definire una nuova classe.
+%%% Non permette la ridefinizione di una classe una volta definita
+%%% senza rimuoverla manualmente.
+%%% Controlla che Parents sia una lista di classi definite.
+%%% Recupera i metodi delle sue superclassi e
+%%% li appende alle Parts per poterli ereditare o ridefinire.
+%%% Controlla che ogni elemento di Parts sia corretto in forma e valori.
+%%% Recupera i fields delle superclassi e li appende ai suoi fields
+%%% per poi rimuovere quelli gi� definiti.
 def_class(Name, Parents) :-
     def_class(Name, Parents, []).
 def_class(Name, Parents, Parts) :-
@@ -195,8 +218,7 @@ def_class(Name, Parents, Parts) :-
     append(Parts, Parents_Methods, Mid_Parts),
     maplist(check_part(Name), Mid_Parts),
     findall(method(Methods_Name, Args, Body),
-	    class_method(Name, Methods_Name, Args, Body), Methods),
-    write(Methods), 
+	    class_method(Name, Methods_Name, Args, Body), Methods), 
     copy_fields(Name, Temp1),
     inherit_fields(Parents, Temp2),
     append(Temp2, Temp1, Temp3),
@@ -204,45 +226,96 @@ def_class(Name, Parents, Parts) :-
     retract(class(Name, Parents,[])),
     append(Fields, Methods, Final_Parts),
     assert(class(Name, Parents, Final_Parts)).
-/*def_class(Name, Parents, Parts) :-
-    class(Name, _, _),
-    retract(class(Name, _, _)),
-    !.*/
 
 
+%%% is_class(Name)
+%%%
+%%% Name --> atomo che rappresenta il nome della classe da controllore
+%%%
+%%% Dato un nome Name controlla l'esistenza di una classe con quel nome 
 is_class(Name) :-
     atom(Name),
     class(Name, _, _),  
     !.
 
-
+%%% is_instance(Value)
+%%%
+%%% Value --> atomo che rappresenta il nome di una istanza
+%%%
+%%% Controlla che Value sia il nome di una istanza definita
 is_instance(Value):- 
     atom(Value),
     instance(Value, _, _),
     !.
+%%% is_instance(Value, Class_Name)
+%%%
+%%% Value --> atomo che rappresenta il nome di una istanza
+%%% Class_Name --> nome di una classe
+%%%
+%%% Variante di is_instance
+%%% Controlla che Value sia il nome di una istanza definita e
+%%% di classe che ha come superclasse Class_Name
 is_instance(Value, Class_Name) :-
     atom(Value),
     is_class(Class_Name),
     instance(Value, N, _),
-    is_superclass_of(Class_Name,N),
+    is_superclass_of(Class_Name, N),
     !.
+%%% is_instance(Value, Class_Name)
+%%%
+%%% Value --> atomo che rappresenta il nome di una istanza
+%%% Class_Name --> nome di una classe
+%%%
+%%% Variante di is_instance
+%%% Controlla che Value sia il nome di una istanza definita e
+%%% di classe Class_Name
 is_instance(Value, Class_Name) :-
     atom(Value),
     is_class(Class_Name),
     instance(Value, Class_Name, _),
     !.
+%%% is_instance(Value)
+%%%
+%%% Value --> variabile libera
+%%%
+%%% Variante di is_instance
+%%% Se Value e' una variabile libera
+%%% ritorna il nome della prima istanza che unifica con Value
 is_instance(Value):-
     var(Value),
     call(instance(Value, _, _)).
+%%% is_instance(Value, Class_Name)
+%%%
+%%% Value --> variabile libera
+%%% Class_Name --> nome di una classe
+%%%
+%%% Variante di is_instance
+%%% Se Value e' una variabile libera unificala con 
+%%% il nome della prima istanza di classe Class_Name
 is_instance(Value, Class_Name):-
     var(Value),
     is_class(Class_Name),
     call(instance(Value, Class_Name, _)).
+%%% is_instance(Value)
+%%%
+%%% Value --> oggetto compound che rappresenta una istanza
+%%%
+%%% Variante di is_instance
+%%% Controlla che Value sia un compound che rappresenta una istanza
 is_instance(Value):-
     compound(Value),
     call(Value).
 
 
+%%% is_superclass_of(Super_Class, Class)
+%%%
+%%% Super_Class --> atomo che rappresenta il nome di una classe
+%%% Class --> atomo che rappresenta il nome di una classe
+%%%
+%%% Funzione che controlla se Super_Class e' una superclasse di Class,
+%%% dove sia Super_Class che Class devono essere classi definite.
+%%% Usa la ricorsione per scorrere l'albero di superclassi di una classe e
+%%% se trova una classe il cui nome corrisponde a Super_Class ritorna True
 is_superclass_of(Super_Class, Class):-
     findall([Class, Parents, Parts], class(Class, Parents, Parts), Classes),
     getFirst(Classes,[Name, Parents, Parts]),
@@ -259,13 +332,34 @@ is_superclass_of(Super_Class, Class, [P | Ps]) :-
     Super_Class =@= P,
     true.
 
-
+%%% inst(Instance_Name, Instance)
+%%%
+%%% Instance_Name --> atomo che rappresenta il nome di una istanza
+%%% Instance --> valore che corrisponde all'instanza di nome Instance_Name
+%%%
+%%% Dato un Instance_Name, nome di una istanza definita, se:
+%%% 1)Instance e' una variabile libera allora unificala con
+%%%   la rappresentazione dell'istanza;
+%%% 2)Altrimenti controlla se Instance corrisponde con
+%%%   la rappresentazione dell'instanza
 inst(Instance_Name, Instance) :-
     atom(Instance_Name),
     instance(Instance_Name, Class_Name, Fields),
     Instance = instance(Instance_Name, Class_Name, Fields).
 
 
+%%% field(Instance, Field_Name, Result)
+%%%
+%%% Instance --> rappresenta  una istanza
+%%% Field_Name --> nome di un field presente nell'istanza
+%%% Result --> valore del field con nome Field_Name nell'istanza Instance
+%%%
+%%% Dato Instance, rappresentazione di una istanza definita, se:
+%%% 1)Instance e' un atomo allora corrisponde al nome di una istanza,
+%%%   recupero il valore del field Field_Name e lo unifico con Result;
+%%% 2)Altrimenti controlla se Instance corrisponde con
+%%%   la rappresentazione di una instanza definita e
+%%%   recupera il valore del field Field_Name e lo unifico con Result
 field(Instance, Field_Name, Result):-
     atom(Instance),
     atom(Field_Name),
@@ -280,6 +374,15 @@ field(Instance, Field_Name, Result):-
     !.  
 
 
+%%% fieldx(Instance, List, Result)
+%%%
+%%% Instance --> rappresenta  una istanza
+%%% List --> lista che rappresenta la catena di field da risalire
+%%% Result --> valore del field che ha come nome l'ultimo elemento di List
+%%%            nell'istanza Instance
+%%%
+%%% Recupera il valore del field che ha come nome l'ultimo elemento di List e
+%%% unificalo con Result.
 fieldx(Instance, [FN], Result):- 
     atom(FN),
     field(Instance, FN, Result),
@@ -317,22 +420,6 @@ check_part(Class_Name, method(Method_Name, Args, Body)) :-
     class_method(Class_Name, Method_Name, _, _),
     !.
 
-/*
-check_exist_method(Method_List, Method_Name, Num_Args) :-  
-    check_length(Method_List, Num_Args),
-    !.
-
-
-check_length([[Method_Name, Args] | Ms], Arg_Length) :-
-    length(Args, L),
-    Arg_Length = L,
-    !.
-check_length([[Method_Name, Args] | Ms], Arg_Length) :-
-    length(Args, L),
-    Arg_Length =\= L,
-    check_length(Ms, Arg_Length),
-    !.
-*/
 
 install_method(Class_Name, Method_Name, Args, Body) :-    
     This_Args = [this | Args],  
@@ -478,7 +565,16 @@ modify_fields(Class_Name, [IF | IFs], [TMF | TMFs], Result) :-
     modify_fields(Class_Name, IFs, [TMF | TMFs], R1),
     append([N = V], R1, Result).
 
-
+%%% refactor_to_instance_fields(List, Result)
+%%%
+%%% List --> lista di fields di forma (Name, Value, Type)
+%%% Result --> lista dei fields di List in forma (Name, Value)
+%%%
+%%% Mi permette di prendere una lista di fields
+%%% con elementi di forma (Name, Value, Type)
+%%% e trasformarla in una lista con gli stessi fields ma di forma (Name, Value).
+%%% Questa funzione e' utile per trasformare i fields di una classe
+%%% in fields di una istanza
 refactor_to_instance_fields([], []) :-
     !.
 refactor_to_instance_fields([F | Fs], R) :-
@@ -492,10 +588,11 @@ initialize():-
     call(def_class(a,[],[field(a,"",string),field(zampe,16,integer),
                             method(writeName,[Name],(field(this,a,Name),write(Name))),
                             method(writeHello,[],(write("\n\n####-HELLO-####\n\n")))])),
-    call(def_class(b,[a],[field(b,"",string),field(zampe,60,integer)])),
+    call(def_class(b,[],[field(b,"",string),field(zampe,60,integer), 
+                            method(getField,[Field_Name], (field(this,Field_Name, V), write(V)))])),
     call(def_class(animale,[b],[field(specie,"",string),field(zampe,0,integer)])),
     call(def_class(persona,[b],[field(nome,"persona",string),field(cognome,"",string)])),
-    call(def_class(cane,[persona,animale],[field(padrone, vivvio, persona),field(nome,"",string),field(anni,0,integer), 
+    call(def_class(cane,[persona,animale,a],[field(padrone, vivvio, persona),field(nome,"",string),field(anni,0,integer), 
                             method(writeName,[Name],(field(this,nome,Name),write(Name)))])),
    
     !.
